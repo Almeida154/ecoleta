@@ -5,17 +5,17 @@ class PointsController {
   async all(req: Request, res: Response) {
     const { city, uf, items } = req.query;
 
+    if (!city && !uf && !items) {
+      const allPoints = await knex('points').select('*');
+      return res.json(allPoints);
+    }
+
     const parsedItems = String(items)
       .split(',')
       .map(item => Number(item.trim()));
 
     const points = await knex('points')
-      .join(
-        'point_items',
-        'points.id',
-        '=',
-        'point_items.point_id'
-      )
+      .join('point_items', 'points.id', '=', 'point_items.point_id')
       .whereIn('point_items.item_id', parsedItems)
       .where('city', String(city))
       .where('uf', String(uf))
@@ -28,22 +28,13 @@ class PointsController {
   async show(req: Request, res: Response) {
     const { id } = req.params;
 
-    const point = await knex('points')
-      .where('id', id)
-      .first();
+    const point = await knex('points').where('id', id).first();
 
     if (!point)
-      return res
-        .status(400)
-        .json({ error: 'Point not found!' });
+      return res.status(400).json({ error: 'Point not found!' });
 
     const items = await knex('items')
-      .join(
-        'point_items',
-        'items.id',
-        '=',
-        'point_items.item_id'
-      )
+      .join('point_items', 'items.id', '=', 'point_items.item_id')
       .where('point_items.point_id', '=', id)
       .select('items.title');
 
@@ -90,10 +81,7 @@ class PointsController {
 
     await trx.commit();
 
-    return res.json({
-      id: point_id,
-      ...point,
-    });
+    return res.json({ message: `${name} created successfully` });
   }
 }
 
