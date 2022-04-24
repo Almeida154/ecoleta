@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import {
   StyleSheet,
   ImageBackground,
@@ -6,15 +6,19 @@ import {
   Image,
   Text,
   TouchableWithoutFeedback,
+  TouchableOpacity,
+  TouchableHighlight,
 } from 'react-native';
 import { Feather as Icon } from '@expo/vector-icons';
 import { RectButton } from 'react-native-gesture-handler';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
+import ModalDropdown from 'react-native-modal-dropdown';
+import axios from 'axios';
 
 type RootStackParamList = {
   Home: undefined;
-  Points: undefined;
-  Detail: undefined;
+  Points: { uf: string; city: string };
+  Detail: { point_id: number };
 };
 
 type Props = NativeStackScreenProps<
@@ -23,7 +27,74 @@ type Props = NativeStackScreenProps<
   'MyStack'
 >;
 
+interface IBGEUFResponse {
+  sigla: String;
+}
+
+interface IBGECityResponse {
+  nome: String;
+}
+
 const Home = ({ navigation }: Props) => {
+  const [ufs, setUfs] = useState<string[]>([]);
+  const [cities, setCities] = useState<string[]>([]);
+
+  const [selectedUf, setSelectedUf] = useState('0');
+  const [selectedCity, setSelectedCity] = useState('0');
+
+  useEffect(() => {
+    (async () => {
+      const ufs = await axios.get<IBGEUFResponse[]>(
+        'https://servicodados.ibge.gov.br/api/v1/localidades/estados'
+      );
+      const ufInitials = ufs.data.map(uf => uf.sigla.toString());
+      setUfs(ufInitials);
+    })();
+  }, []);
+
+  useEffect(() => {
+    (async () => {
+      if (selectedUf === '0') return;
+
+      const cities = await axios.get<IBGECityResponse[]>(
+        `https://servicodados.ibge.gov.br/api/v1/localidades/estados/${selectedUf}/municipios`
+      );
+      const cityNames = cities.data.map(city => city.nome.toString());
+      setCities(cityNames);
+    })();
+  }, [selectedUf]);
+
+  const ufDropdownRef = useRef<ModalDropdown>();
+  const cityDropdownRef = useRef<ModalDropdown>();
+
+  const UfRow = (rowData: string, index: number) => {
+    return (
+      <TouchableOpacity
+        onPress={() => {
+          ufDropdownRef.current?.select(index);
+          ufDropdownRef.current?.hide();
+          setSelectedUf(String(ufs[index]));
+        }}
+        style={styles.rowContainer}>
+        <Text style={styles.rowText}>{rowData}</Text>
+      </TouchableOpacity>
+    );
+  };
+
+  const CityRow = (rowData: string, index: number) => {
+    return (
+      <TouchableOpacity
+        onPress={() => {
+          cityDropdownRef.current?.select(index);
+          cityDropdownRef.current?.hide();
+          setSelectedCity(String(cities[index]));
+        }}
+        style={styles.rowContainer}>
+        <Text style={styles.rowText}>{rowData}</Text>
+      </TouchableOpacity>
+    );
+  };
+
   return (
     // @ts-ignore
     <ImageBackground
@@ -42,8 +113,47 @@ const Home = ({ navigation }: Props) => {
       </View>
 
       <View style={styles.footer}>
+        {/* @ts-ignore */}
+        <ModalDropdown
+          ref={ufDropdownRef}
+          defaultValue='Selecione a UF'
+          textStyle={styles.dropdownPlaceholder}
+          style={styles.dropdown}
+          dropdownStyle={styles.dropdownModal}
+          showsVerticalScrollIndicator={false}
+          adjustFrame={style => {
+            style.left = 32;
+            style.right = 32;
+            return style;
+          }}
+          renderRow={UfRow}
+          options={ufs}
+        />
+
+        {/* @ts-ignore */}
+        <ModalDropdown
+          ref={cityDropdownRef}
+          defaultValue='Selecione a cidade'
+          textStyle={styles.dropdownPlaceholder}
+          style={styles.dropdown}
+          dropdownStyle={styles.dropdownModal}
+          showsVerticalScrollIndicator={false}
+          adjustFrame={style => {
+            style.left = 32;
+            style.right = 32;
+            return style;
+          }}
+          renderRow={CityRow}
+          options={cities}
+        />
+
         <TouchableWithoutFeedback
-          onPress={() => navigation.navigate('Points')}>
+          onPress={() =>
+            navigation.navigate('Points', {
+              uf: selectedUf,
+              city: selectedCity,
+            })
+          }>
           <RectButton style={styles.button}>
             <View style={styles.buttonIcon}>
               <Text>
@@ -90,7 +200,28 @@ const styles = StyleSheet.create({
 
   footer: {},
 
-  select: {},
+  dropdown: {
+    backgroundColor: '#FFF',
+    height: 60,
+    borderRadius: 10,
+    justifyContent: 'center',
+    paddingHorizontal: 24,
+    marginBottom: 8,
+  },
+
+  dropdownPlaceholder: {
+    fontFamily: 'Roboto_400Regular',
+    color: '#6C6C80',
+    fontSize: 16,
+  },
+
+  dropdownModal: {
+    overflow: 'hidden',
+    borderRadius: 10,
+    height: 220,
+    elevation: 20,
+    shadowColor: '#00000070',
+  },
 
   input: {
     height: 60,
@@ -98,6 +229,18 @@ const styles = StyleSheet.create({
     borderRadius: 10,
     marginBottom: 8,
     paddingHorizontal: 24,
+    fontSize: 16,
+  },
+
+  rowContainer: {
+    height: 40,
+    justifyContent: 'center',
+    paddingHorizontal: 24,
+  },
+
+  rowText: {
+    fontFamily: 'Roboto_400Regular',
+    color: '#6C6C80',
     fontSize: 16,
   },
 
