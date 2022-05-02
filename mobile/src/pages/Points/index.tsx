@@ -39,6 +39,7 @@ interface Point {
   id: number;
   name: string;
   image: string;
+  image_url: string;
   latitude: number;
   longitude: number;
 }
@@ -55,17 +56,13 @@ const Points = ({ navigation, route }: Props) => {
     (async () => {
       const items = await api.get('items');
       setItems(items.data);
+      console.log(items.data);
     })();
   }, []);
 
   useEffect(() => {
     (async () => {
-      console.log(
-        'Getting',
-        route.params.city,
-        route.params.uf,
-        selectedItems
-      );
+      console.log(route.params.city, route.params.uf, selectedItems);
 
       const points = await api.get('points', {
         params: {
@@ -76,6 +73,7 @@ const Points = ({ navigation, route }: Props) => {
       });
 
       setPoints(points.data);
+      console.log(points.data);
     })();
   }, [selectedItems]);
 
@@ -152,7 +150,7 @@ const Points = ({ navigation, route }: Props) => {
                       <View style={styles.mapMarkerContainer}>
                         <Image
                           style={styles.mapMarkerImage}
-                          source={{ uri: point.image }}
+                          source={{ uri: point.image_url }}
                         />
                         <Text style={styles.mapMarkerTitle}>
                           {point.name}

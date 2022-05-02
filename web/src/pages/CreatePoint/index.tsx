@@ -14,6 +14,8 @@ import {
   useMapEvents,
 } from 'react-leaflet';
 
+import Dropzone from '../../components/Dropzone';
+
 import api from '../../services/api';
 
 import './styles.css';
@@ -54,6 +56,7 @@ const CreatePoint = () => {
   const [selectedPosition, setSelectedPosition] =
     useState<[number, number]>(initialPosition);
   const [selectedItems, setSelectedItems] = useState<number[]>([]);
+  const [selectedFile, setSelectedFile] = useState<File>();
 
   const history = useHistory();
 
@@ -143,17 +146,19 @@ const CreatePoint = () => {
     const uf = selectedUf;
     const city = selectedCity;
     const items = selectedItems;
+    const file = selectedFile;
 
-    const data = {
-      name,
-      email,
-      whatsapp,
-      uf,
-      city,
-      latitude,
-      longitude,
-      items,
-    };
+    const data = new FormData();
+
+    data.append('name', name);
+    data.append('email', email);
+    data.append('whatsapp', whatsapp);
+    data.append('uf', uf);
+    data.append('city', city);
+    data.append('latitude', latitude.toString());
+    data.append('longitude', longitude.toString());
+    data.append('items', items.join(','));
+    if (file) data.append('image', file);
 
     const response = await api.post('points', data);
     alert(response.data.message);
@@ -176,6 +181,8 @@ const CreatePoint = () => {
           <h1>
             Cadastro do <br /> ponto de coleta
           </h1>
+
+          <Dropzone onFileUploaded={setSelectedFile} />
 
           <fieldset>
             <legend>
@@ -214,7 +221,6 @@ const CreatePoint = () => {
               </div>
             </div>
           </fieldset>
-
           <fieldset>
             <legend>
               <h2>Endereço</h2>
@@ -264,7 +270,6 @@ const CreatePoint = () => {
               </div>
             </div>
           </fieldset>
-
           <fieldset>
             <legend>
               <h2>Ítens de coleta</h2>
@@ -288,7 +293,6 @@ const CreatePoint = () => {
               ))}
             </ul>
           </fieldset>
-
           <button type='submit'>Cadastrar ponto de coleta</button>
         </form>
       </div>
